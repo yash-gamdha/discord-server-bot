@@ -1,0 +1,13 @@
+name = "discord-server-automation-bot"
+main = "src/index.ts"
+compatibility_date = "2026-08-01"
+
+# Runs every Monday at 02:30 UTC = 08:00 IST.
+# Cron syntax: minute hour day-of-month month day-of-week
+[triggers]
+crons = ["30 2 * * 1"]
+
+# Non-secret config lives here. Secrets (API keys, webhook URL, trigger secret)
+# are set separately with `wrangler secret put <NAME>` — never committed.
+[vars]
+DIGEST_TITLE = "Weekly Market Digest"
