@@ -29,9 +29,13 @@ async function buildDigest(env: Env): Promise<DigestData> {
   return { globalNews, indianNews, ipos, currencies, errors };
 }
 
-async function runMarketDigest(env: Env): Promise<DigestData> {
+async function runMarketDigest(env: Env, shouldTrigger: boolean): Promise<DigestData> {
   const data = await buildDigest(env);
-  await sendMarketDigestToDiscord(env, data);
+
+  if (shouldTrigger) {
+    await sendMarketDigestToDiscord(env, data);
+  }
+
   return data;
 }
 
@@ -49,7 +53,7 @@ function safeEqual(a: string, b: string): boolean {
 export default {
   // Weekly cron trigger — see wrangler.toml [triggers]
   async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
-    ctx.waitUntil(runMarketDigest(env));
+    ctx.waitUntil(runMarketDigest(env, true));
   },
 
   // Manual triggers: POST with prefix: /trigger with header X-Trigger-Secret: <TRIGGER_SECRET>
@@ -66,27 +70,43 @@ export default {
 
     switch (url.pathname) {
       case "/trigger/market-digest":
-        return this.marketDigestTrigger(request, env)
+        return this.marketDigestTrigger(request, url, env)
     }
   },
 
-  async marketDigestTrigger(request: Request, env: Env): Promise<Response> {
+  async marketDigestTrigger(request: Request, url: URL, env: Env): Promise<Response> {
     if (!(await this.secretVarifier(request, env))) {
       return new Response("Unauthorized", { status: 401 });
     }
+
+    const shouldTrigger = url.searchParams.get("skipTrigger") !== "true"
    
     try {
-      const data = await runMarketDigest(env);
-      return new Response(
-        JSON.stringify({
-          ok: true,
-          errors: data.errors,
+      const data = await runMarketDigest(env, shouldTrigger);
+
+      const responseContent = shouldTrigger ? 
+        {
           counts: {
             globalNews: data.globalNews.length,
             indianNews: data.indianNews.length,
             ipos: data.ipos.length,
             currencies: data.currencies.length,
-          },
+          }
+        }
+        : {
+          data: {
+            globalNews: data.globalNews,
+            indianNews: data.indianNews,
+            ipos: data.ipos,
+            currencies: data.currencies,
+          }
+        }
+          
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          errors: data.errors,
+          ...responseContent,
         }),
         { status: 200, headers: { "Content-Type": "application/json" } }
       );
