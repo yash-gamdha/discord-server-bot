@@ -105,9 +105,13 @@ export function buildDigestPayload(data: DigestData, title: string) {
   };
 }
 
-export async function sendDigestToDiscord(env: Env, data: DigestData): Promise<void> {
+export async function sendDigestToDiscord(env: Env, data: DigestData, shouldTrigger: boolean): Promise<Record<string, any>> {
   const payload = buildDigestPayload(data, "Weekly Market Digest");
 
+  if (!shouldTrigger) {
+    return payload;
+  }
+  
   const res = await fetch(env.DISCORD_WEBHOOK_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -118,4 +122,13 @@ export async function sendDigestToDiscord(env: Env, data: DigestData): Promise<v
     const body = await res.text();
     throw new Error(`Discord webhook failed: ${res.status} ${body}`);
   }
+
+  return {
+    counts: {
+      globalNews: data.globalNews.length,
+      indianNews: data.indianNews.length,
+      ipos: data.ipos.length,
+      currencies: data.currencies.length,
+    }
+  };
 }

@@ -29,14 +29,10 @@ async function buildDigest(env: Env): Promise<DigestData> {
   return { globalNews, indianNews, ipos, currencies, errors };
 }
 
-async function runMarketDigest(env: Env, shouldTrigger: boolean): Promise<DigestData> {
+async function runMarketDigest(env: Env, shouldTrigger: boolean): Promise<Record<string, any>> {
   const data = await buildDigest(env);
 
-  if (shouldTrigger) {
-    await sendMarketDigestToDiscord(env, data);
-  }
-
-  return data;
+  return await sendMarketDigestToDiscord(env, data, shouldTrigger);
 }
 
 // Constant-time string comparison to avoid leaking the secret via timing.
@@ -84,24 +80,10 @@ export default {
     try {
       const data = await runMarketDigest(env, shouldTrigger);
 
-      const responseContent = shouldTrigger ? 
-        {
-          counts: {
-            globalNews: data.globalNews.length,
-            indianNews: data.indianNews.length,
-            ipos: data.ipos.length,
-            currencies: data.currencies.length,
-          }
-        }
-        : {
-          data: {
-            globalNews: data.globalNews,
-            indianNews: data.indianNews,
-            ipos: data.ipos,
-            currencies: data.currencies,
-          }
-        }
-          
+      const responseContent = {
+        fields: data.embeds[0].fields
+      }
+      
       return new Response(
         JSON.stringify({
           ok: true,
