@@ -14,11 +14,16 @@ export interface NewsItem {
 }
 
 export interface IpoItem {
+  symbol: string;
   name: string;
-  status?: string;
-  openDate?: string;
-  closeDate?: string;
-  priceRange?: string;
+  status: "upcoming" | "listed" | "active" | "closed" | "pre_apply";
+  additionalText: string | null;
+  minPrice: number | null;
+  maxPrice: number | null;
+  biddingStartDate: string | null;
+  biddingEndDate: string | null;
+  listingDate: string | null;
+  totalSubscriptionRate: number | null;
 }
 
 export interface CurrencyRate {

@@ -36,6 +36,7 @@ export async function getIndianNews(env: Env, limit = 6): Promise<NewsItem[]> {
     }));
 }
 
+
 export async function getIndianIpos(env: Env): Promise<IpoItem[]> {
   const res = await fetch(`${BASE_URL}/ipo`, {
     headers: { "x-api-key": env.INDIAN_API_KEY },
@@ -45,24 +46,26 @@ export async function getIndianIpos(env: Env): Promise<IpoItem[]> {
     throw new Error(`Indian API IPO failed: ${res.status} ${res.statusText}`);
   }
 
-  const data = (await res.json()) as any;
+  const data = (await res.json()) as Record<string, any[]>;
 
-  // The /ipo endpoint has returned a few different shapes historically
-  // (a flat array, or an object keyed by status like `upcoming`/`active`).
-  // Normalize defensively rather than assuming one exact shape.
-  const raw: any[] = Array.isArray(data)
-    ? data
-    : [
-        ...(data.upcoming ?? []),
-        ...(data.active ?? []),
-        ...(data.ongoing ?? []),
-      ];
+  // Response is an object keyed by status; grab all statuses we care about
+  // for the digest (upcoming, active, pre_apply — listed/closed are noise here).
+  const raw: any[] = [
+    ...(data.upcoming ?? []),
+    ...(data.active ?? []),
+    ...(data.pre_apply ?? []),
+  ];
 
   return raw.map((item) => ({
-    name: item.name ?? item.companyName ?? item.company_name ?? "Unknown IPO",
-    status: item.status ?? item.ipo_status,
-    openDate: item.openDate ?? item.open_date ?? item.bidding_start_date,
-    closeDate: item.closeDate ?? item.close_date ?? item.bidding_end_date,
-    priceRange: item.priceRange ?? item.price_range ?? item.issue_price,
+    symbol: item.symbol,
+    name: item.name,
+    status: item.status,
+    additionalText: item.additional_text,
+    minPrice: item.min_price,
+    maxPrice: item.max_price,
+    biddingStartDate: item.bidding_start_date,
+    biddingEndDate: item.bidding_end_date,
+    listingDate: item.listing_date,
+    totalSubscriptionRate: item.total_subscription_rate,
   }));
 }
