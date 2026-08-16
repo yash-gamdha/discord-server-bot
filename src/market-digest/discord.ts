@@ -31,15 +31,42 @@ function formatNewsList(items: DigestData["globalNews"]): string {
 
 function formatIpoList(items: DigestData["ipos"]): string {
   if (items.length === 0) return "_No IPO data fetched._";
-  const lines = items.slice(0, 8).map((ipo) => {
-    const parts = [ipo.name];
-    if (ipo.status) parts.push(`(${ipo.status})`);
-    if (ipo.openDate || ipo.closeDate) {
-      parts.push(`— ${ipo.openDate ?? "?"} to ${ipo.closeDate ?? "?"}`);
+
+  const byStatus = (status: string) =>
+    items.filter((ipo) => ipo.status === status).slice(0, 4);
+
+  const selected = [
+    ...byStatus("upcoming"),
+    ...byStatus("active"),
+    ...byStatus("pre_apply"),
+  ];
+
+  if (selected.length === 0) return "_No IPO data fetched._";
+
+  const lines = selected.map((ipo) => {
+    const parts = [ipo.name, `(${ipo.status})`];
+
+    // additionalText is already a human-readable status message from the
+    // API (e.g. "Closes on 17 Aug at 3:50 PM"), so prefer it over raw dates.
+    if (ipo.additionalText) {
+      parts.push(`— ${ipo.additionalText}`);
+    } else if (ipo.biddingStartDate || ipo.biddingEndDate) {
+      parts.push(
+        `— ${ipo.biddingStartDate ?? "?"} to ${ipo.biddingEndDate ?? "?"}`,
+      );
     }
-    if (ipo.priceRange) parts.push(`@ ${ipo.priceRange}`);
+
+    if (ipo.minPrice && ipo.maxPrice) {
+      parts.push(`@ ₹${ipo.minPrice}-${ipo.maxPrice}`);
+    }
+
+    if (ipo.status === "active" && ipo.totalSubscriptionRate != null) {
+      parts.push(`(${ipo.totalSubscriptionRate.toFixed(1)}x subscribed)`);
+    }
+
     return `• ${parts.join(" ")}`;
   });
+
   return joinWithinBudget(lines);
 }
 
